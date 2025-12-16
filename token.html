@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Todo Chatbot - Test Token</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .token-box {
+            background: #f9f9f9;
+            border: 2px solid #4CAF50;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 20px 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .open-btn {
+            background: #2196F3;
+        }
+        .open-btn:hover {
+            background: #0b7dda;
+        }
+        .success {
+            color: #4CAF50;
+            margin-top: 10px;
+            display: none;
+        }
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Todo Chatbot - Authentication Token</h1>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Click the "Copy Token" button below</li>
+                <li>Click "Open Chatbot" to go to the app</li>
+                <li>Paste the token in the authentication field</li>
+                <li>Click "Start Chatting"</li>
+            </ol>
+        </div>
+
+        <h3>Your Test Token:</h3>
+        <div class="token-box" id="token">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJpc3MiOiJodHRwczovL3Rlc3QuYXV0aC5jb20iLCJpYXQiOjE3NjU3MjgzODYsImV4cCI6MTc2NjMzMzE4Nn0.JGqLxeaMBeUH76g5zvBGf2EohvvimivpVcNGFutHTLc</div>
+
+        <button onclick="copyToken()">📋 Copy Token</button>
+        <button class="open-btn" onclick="openChatbot()">🚀 Open Chatbot</button>
+
+        <div class="success" id="success">✅ Token copied to clipboard!</div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <h3>Alternative: Direct Login</h3>
+            <p>Click the button below to open the chatbot with the token automatically filled:</p>
+            <button onclick="openWithToken()">🔓 Auto-Login to Chatbot</button>
+        </div>
+    </div>
+
+    <script>
+        const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJpc3MiOiJodHRwczovL3Rlc3QuYXV0aC5jb20iLCJpYXQiOjE3NjU3MjgzODYsImV4cCI6MTc2NjMzMzE4Nn0.JGqLxeaMBeUH76g5zvBGf2EohvvimivpVcNGFutHTLc";
+
+        function copyToken() {
+            navigator.clipboard.writeText(TOKEN).then(function() {
+                document.getElementById('success').style.display = 'block';
+                setTimeout(function() {
+                    document.getElementById('success').style.display = 'none';
+                }, 3000);
+            });
+        }
+
+        function openChatbot() {
+            window.open('http://localhost:5173', '_blank');
+        }
+
+        function openWithToken() {
+            // Store token in localStorage for the chatbot
+            localStorage.setItem('chatbot_token', TOKEN);
+            alert('Token saved! The chatbot will open now. If it asks for a token, paste: ' + TOKEN);
+            window.open('http://localhost:5173', '_blank');
+        }
+    </script>
+</body>
+</html>

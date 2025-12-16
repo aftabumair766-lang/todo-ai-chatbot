@@ -1,55 +1,178 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: [template] → 1.0.0
+- Initial ratification
+- Principles defined: 6 core principles established
+- Added sections: Technology Stack, Security Requirements, Development Workflow
+- Templates requiring updates: ✅ All templates aligned with initial constitution
+- Follow-up TODOs: None
+-->
+
+# Todo AI Chatbot Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. MCP-First Architecture
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All AI agent interactions with the application MUST go through Model Context Protocol (MCP) tools. Direct database access or API calls from the AI agent are prohibited.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rules:**
+- Every task operation (create, read, update, delete) exposed as an MCP tool
+- MCP tools are the single source of truth for AI capabilities
+- Tools MUST be stateless and self-contained
+- Tool parameters and returns follow strict schemas (documented in specs)
+- No business logic in the AI agent layer—agents orchestrate tools only
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale:** MCP provides a standardized, testable interface that decouples AI logic from application logic, enabling independent evolution and testing of both layers.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Stateless Server Design (NON-NEGOTIABLE)
 
-### [PRINCIPLE_6_NAME]
+The FastAPI server MUST NOT hold any conversation or session state in memory. All state MUST be persisted to the database immediately.
 
+**Rules:**
+- Each API request is independent and self-contained
+- Conversation history loaded from database on every request
+- No in-memory caches for user sessions or conversation state
+- Server restarts MUST NOT lose any user data or conversation context
+- Horizontally scalable by design—any server instance handles any request
 
-[PRINCIPLE__DESCRIPTION]
+**Rationale:** Stateless architecture ensures scalability, resilience, and enables zero-downtime deployments. This is critical for production readiness.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### III. Test-First Development (NON-NEGOTIABLE)
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+Tests MUST be written and approved before implementation begins. Red-Green-Refactor cycle strictly enforced.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rules:**
+- Write tests → Get user approval → Confirm tests fail (Red) → Implement until pass (Green) → Refactor if needed
+- MCP tools require unit tests with mocked database
+- AI agent behavior requires integration tests with real tool calls
+- API endpoints require request/response contract tests
+- Database models require migration and constraint tests
+- No PR merges without passing test suite
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Rationale:** AI agents can produce unpredictable behavior; comprehensive tests ensure reliability and catch regressions early. TDD enforces clear contracts before implementation.
+
+### IV. Security First
+
+User data, authentication, and secrets MUST be handled with production-grade security from day one.
+
+**Rules:**
+- All API endpoints require valid user authentication (Better Auth)
+- Database queries MUST filter by `user_id` to prevent cross-user data leaks
+- Environment variables for all secrets (database URLs, API keys)—never hardcoded
+- Input validation on all API endpoints and MCP tool parameters
+- SQL injection prevention via SQLModel ORM (no raw queries)
+- HTTPS required for production deployments
+- Secrets stored in `.env` and excluded from version control
+
+**Rationale:** Security vulnerabilities in todo apps can expose sensitive user data. Building security in from the start is cheaper than retrofitting later.
+
+### V. Database as Source of Truth
+
+All application state—tasks, conversations, messages—MUST be persisted to Neon PostgreSQL. The database schema is the canonical data model.
+
+**Rules:**
+- No ephemeral state (in-memory structures, local files) for user data
+- Database migrations tracked and versioned (Alembic or SQLModel migrations)
+- All writes go through SQLModel ORM models
+- Foreign key constraints enforced at database level
+- Timestamps (`created_at`, `updated_at`) required on all mutable tables
+- Soft deletes preferred over hard deletes where audit trail needed
+
+**Rationale:** Database-driven architecture ensures data durability, enables multi-instance deployments, and provides audit trails for debugging.
+
+### VI. API Contract Clarity
+
+REST API endpoints MUST have explicit contracts with documented request/response schemas and error handling.
+
+**Rules:**
+- FastAPI Pydantic models for all request/response schemas
+- HTTP status codes follow REST conventions (200/201/400/404/500)
+- Error responses include machine-readable error codes and human-readable messages
+- API versioning strategy defined before breaking changes (e.g., `/api/v1/`)
+- OpenAPI documentation auto-generated and accessible at `/docs`
+- Idempotency for state-changing operations where applicable
+
+**Rationale:** Clear contracts enable frontend/backend teams to work independently, simplify testing, and reduce integration bugs.
+
+## Technology Stack
+
+**Mandated Technologies:**
+- **Frontend:** OpenAI ChatKit (hosted with domain allowlist configuration)
+- **Backend:** Python 3.11+ with FastAPI
+- **AI Framework:** OpenAI Agents SDK
+- **MCP Server:** Official MCP SDK (Python)
+- **ORM:** SQLModel
+- **Database:** Neon Serverless PostgreSQL
+- **Authentication:** Better Auth
+- **Testing:** pytest with pytest-asyncio
+
+**Technology Constraints:**
+- Python type hints required for all function signatures
+- Async/await for all I/O operations (database, external APIs)
+- Dependency injection for database sessions and MCP client
+- Environment-based configuration (development, staging, production)
+
+## Security Requirements
+
+**Authentication & Authorization:**
+- Better Auth integration for user identity
+- JWT tokens for stateless authentication (if session-based, stored in database)
+- Row-level security via `user_id` filters in all database queries
+- No API endpoints accessible without valid authentication (except health checks)
+
+**Data Protection:**
+- Database connection strings stored in environment variables
+- OpenAI API keys in environment variables, rotated regularly
+- CORS configuration restricted to allowed frontend origins
+- Rate limiting on chat endpoint to prevent abuse (e.g., 10 requests/minute per user)
+
+**Compliance:**
+- User data deletion capability (GDPR right to erasure)
+- Audit logs for sensitive operations (account deletion, bulk task operations)
+
+## Development Workflow
+
+**Feature Development:**
+1. **Specify:** Create feature spec in `specs/<feature-name>/spec.md`
+2. **Plan:** Architecture and design decisions in `specs/<feature-name>/plan.md`
+3. **Tasks:** Breakdown in `specs/<feature-name>/tasks.md` with acceptance criteria
+4. **Red-Green-Refactor:** Write tests → Implement → Refactor
+5. **Review:** Code review with constitution compliance check
+6. **Deploy:** Merge to main triggers deployment pipeline
+
+**Testing Gates:**
+- All tests pass locally before pushing
+- CI/CD pipeline runs full test suite on PRs
+- Integration tests run against staging database before production deploy
+
+**Code Review Requirements:**
+- At least one approval required for merges
+- Constitution compliance verified (principles I-VI)
+- Test coverage maintained or improved
+- No secrets or credentials in code
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+**Constitution Authority:**
+- This constitution supersedes all other development practices
+- Non-negotiable principles (II, III) cannot be bypassed without formal amendment
+- Amendments require rationale, impact analysis, and approval process
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Amendment Process:**
+1. Propose change with rationale and impact assessment
+2. Update constitution with semantic version bump (MAJOR for principle removal/redefinition, MINOR for additions, PATCH for clarifications)
+3. Update dependent templates (spec, plan, tasks) to reflect changes
+4. Document in `history/adr/` as an ADR
+5. Communicate changes to all contributors
+
+**Compliance Verification:**
+- All PRs reviewed against constitution principles
+- Automated checks where possible (linting, security scans, test coverage)
+- Quarterly constitution review to ensure relevance
+
+**Runtime Guidance:**
+- See `CLAUDE.md` for AI assistant-specific development guidance
+- See `README.md` for quickstart and setup instructions
+
+**Version**: 1.0.0 | **Ratified**: 2025-12-14 | **Last Amended**: 2025-12-14

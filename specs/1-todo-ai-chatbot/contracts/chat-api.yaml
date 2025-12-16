@@ -1,0 +1,290 @@
+openapi: 3.1.0
+info:
+  title: Todo AI Chatbot API
+  version: 1.0.0
+  description: |
+    RESTful API for natural language todo task management via AI chatbot.
+
+    **Architecture**: Stateless FastAPI server with OpenAI Agents SDK and MCP tools.
+    **Authentication**: JWT tokens from Better Auth (required for all endpoints).
+    **Rate Limiting**: 10 requests/minute per user.
+
+servers:
+  - url: https://api.todo-chatbot.example.com
+    description: Production server
+  - url: http://localhost:8000
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/chat:
+    post:
+      summary: Send chat message to AI assistant
+      description: |
+        Send a natural language message to the AI chatbot. The chatbot interprets
+        user intent and calls appropriate MCP tools to manage tasks.
+
+        **Stateless Design**: Full conversation history loaded from database on each request.
+        **Agent Behavior**: AI determines which MCP tools to call based on user intent.
+        **Rate Limiting**: 10 requests/minute per authenticated user.
+
+      operationId: chatWithAssistant
+      tags:
+        - Chat
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              addTask:
+                summary: Add a task
+                value:
+                  conversation_id: null
+                  message: "Add a task to buy groceries"
+              listTasks:
+                summary: List tasks
+                value:
+                  conversation_id: 123
+                  message: "Show me all my tasks"
+              completeTask:
+                summary: Complete a task
+                value:
+                  conversation_id: 123
+                  message: "Mark task 5 as complete"
+
+      responses:
+        '200':
+          description: Successful chat response from AI assistant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                taskAdded:
+                  summary: Task successfully added
+                  value:
+                    conversation_id: 124
+                    response: "✅ I've added 'Buy groceries' to your tasks."
+                    tool_calls:
+                      - tool: add_task
+                        arguments:
+                          user_id: "auth0|507f1f77bcf86cd799439011"
+                          title: "Buy groceries"
+                          description: null
+                        result:
+                          task_id: 42
+                          status: "created"
+                          title: "Buy groceries"
+                taskListed:
+                  summary: Tasks successfully listed
+                  value:
+                    conversation_id: 123
+                    response: "You have 3 pending tasks:\n1. Buy groceries\n2. Call mom\n3. Pay bills"
+                    tool_calls:
+                      - tool: list_tasks
+                        arguments:
+                          user_id: "auth0|507f1f77bcf86cd799439011"
+                          status: "pending"
+                        result:
+                          - id: 1
+                            title: "Buy groceries"
+                            completed: false
+                          - id: 2
+                            title: "Call mom"
+                            completed: false
+                          - id: 3
+                            title: "Pay bills"
+                            completed: false
+
+        '400':
+          description: Bad request (invalid input)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error_code: "INVALID_REQUEST"
+                message: "Message content cannot be empty"
+                details:
+                  field: "message"
+                  issue: "empty_string"
+
+        '401':
+          description: Unauthorized (invalid or missing JWT token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error_code: "UNAUTHORIZED"
+                message: "Invalid or expired authentication token"
+
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error_code: "RATE_LIMIT_EXCEEDED"
+                message: "Too many requests. Please wait before trying again."
+                details:
+                  retry_after_seconds: 45
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error_code: "INTERNAL_ERROR"
+                message: "An unexpected error occurred. Please try again later."
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns server health status (no authentication required)
+      operationId: healthCheck
+      tags:
+        - System
+      security: []  # No auth required
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+              example:
+                status: "healthy"
+                timestamp: "2025-12-14T10:30:00Z"
+
+components:
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        conversation_id:
+          type: integer
+          nullable: true
+          description: |
+            Existing conversation ID to continue. If null or omitted, creates new conversation.
+          example: 123
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: |
+            User's natural language message (e.g., "Add a task to buy groceries").
+          example: "Add a task to buy groceries"
+
+    ChatResponse:
+      type: object
+      required:
+        - conversation_id
+        - response
+        - tool_calls
+      properties:
+        conversation_id:
+          type: integer
+          description: ID of the conversation (new or existing)
+          example: 123
+        response:
+          type: string
+          description: AI assistant's natural language response
+          example: "✅ I've added 'Buy groceries' to your tasks."
+        tool_calls:
+          type: array
+          description: List of MCP tools invoked by the agent (for transparency and debugging)
+          items:
+            $ref: '#/components/schemas/ToolCall'
+
+    ToolCall:
+      type: object
+      required:
+        - tool
+        - arguments
+        - result
+      properties:
+        tool:
+          type: string
+          enum: [add_task, list_tasks, complete_task, delete_task, update_task]
+          description: Name of the MCP tool that was called
+          example: "add_task"
+        arguments:
+          type: object
+          description: Arguments passed to the MCP tool
+          additionalProperties: true
+          example:
+            user_id: "auth0|507f1f77bcf86cd799439011"
+            title: "Buy groceries"
+        result:
+          type: object
+          description: Result returned by the MCP tool
+          additionalProperties: true
+          example:
+            task_id: 42
+            status: "created"
+            title: "Buy groceries"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - RATE_LIMIT_EXCEEDED
+            - INTERNAL_ERROR
+          description: Machine-readable error code
+          example: "INVALID_REQUEST"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Message content cannot be empty"
+        details:
+          type: object
+          nullable: true
+          description: Additional error details (optional)
+          additionalProperties: true
+          example:
+            field: "message"
+            issue: "empty_string"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token from Better Auth. Include in Authorization header:
+        `Authorization: Bearer <token>`
+
+        The token's 'sub' claim must contain the user_id.
+
+tags:
+  - name: Chat
+    description: Natural language chat interface for task management
+  - name: System
+    description: System health and monitoring endpoints
