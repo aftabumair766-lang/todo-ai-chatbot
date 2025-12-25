@@ -14,8 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 # from slowapi.util import get_remote_address
 # from slowapi.errors import RateLimitExceeded
 from backend.config import get_settings
-from backend.db.session import init_db, close_db
-from backend.mcp.server import create_mcp_server
+# Database init removed for Vercel serverless (tables already exist in Neon)
+# from backend.db.session import init_db, close_db
+# MCP server initialization moved to lazy loading
+# from backend.mcp.server import create_mcp_server
 from backend.api import chat, chatkit, auth
 
 logger = logging.getLogger(__name__)
@@ -29,36 +31,20 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Application lifespan context manager.
+    Application lifespan context manager (simplified for Vercel).
 
-    Handles startup and shutdown tasks:
-    - Startup: Initialize database tables, create MCP server
-    - Shutdown: Close database connections
-
-    Constitution Compliance:
-    - Principle II: Stateless (no in-memory state, only init/cleanup)
-    - Principle V: Database as Source of Truth (init schema on startup)
+    Vercel serverless functions don't support long-running startup tasks.
+    Database initialization happens on first request instead.
     """
-    # Startup
+    # Startup - minimal initialization for Vercel
     logger.info("Starting Todo AI Chatbot application...")
-
-    # Initialize database (development only - use Alembic in production)
-    if settings.ENVIRONMENT == "development":
-        logger.info("Initializing database tables (development mode)")
-        await init_db()
-
-    # Create MCP server
-    mcp_server = create_mcp_server()
-    logger.info(f"MCP server initialized with {len(mcp_server.tools)} tools")
-
+    logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info("Application startup complete")
 
     yield
 
-    # Shutdown
+    # Shutdown - minimal cleanup
     logger.info("Shutting down application...")
-    await close_db()
-    logger.info("Database connections closed")
 
 
 # ============================================================================
