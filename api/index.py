@@ -1,7 +1,13 @@
 """
-Vercel Entry Point for FastAPI Application
+Vercel Serverless Function Entry Point
 """
+import sys
+import os
+
+# Add parent directory to path so we can import backend
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 from backend.main import app
 
-# This is the ASGI application that Vercel will use
-# Vercel automatically detects this file in /api/index.py
+# Export the FastAPI app as 'app' for Vercel
+__all__ = ['app']
