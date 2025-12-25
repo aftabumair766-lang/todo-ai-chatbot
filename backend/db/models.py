@@ -2,12 +2,49 @@
 Database Models for Todo AI Chatbot
 
 Architecture: SQLModel (Pydantic + SQLAlchemy) with async support
-Schema: 3 tables - tasks, conversations, messages
+Schema: 4 tables - users, tasks, conversations, messages
 """
 
 from datetime import datetime
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
+
+
+# ============================================================================
+# User Model (Better Auth)
+# ============================================================================
+
+class User(SQLModel, table=True):
+    """
+    User model for Better Auth authentication.
+
+    Constitution Compliance:
+    - Principle IV: Security First (passwords hashed, never stored in plaintext)
+    - Principle V: Database as Source of Truth
+    """
+    __tablename__ = "users"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(unique=True, index=True, nullable=False, max_length=255, description="User email (unique)")
+    username: str = Field(unique=True, index=True, nullable=False, max_length=100, description="Username (unique)")
+    hashed_password: str = Field(nullable=False, description="Bcrypt hashed password")
+    is_active: bool = Field(default=True, nullable=False, description="Account active status")
+    is_verified: bool = Field(default=False, nullable=False, description="Email verification status")
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "email": "user@example.com",
+                "username": "johndoe",
+                "is_active": True,
+                "is_verified": True,
+                "created_at": "2025-12-25T00:00:00Z",
+                "updated_at": "2025-12-25T00:00:00Z"
+            }
+        }
 
 
 # ============================================================================
@@ -158,3 +195,37 @@ class MessageResponse(SQLModel):
     role: str
     content: str
     created_at: datetime
+
+
+# ============================================================================
+# Auth Models (Request/Response)
+# ============================================================================
+
+class UserRegister(SQLModel):
+    """Request model for user registration"""
+    email: str = Field(min_length=3, max_length=255, description="Valid email address")
+    username: str = Field(min_length=3, max_length=100, description="Username (3-100 chars)")
+    password: str = Field(min_length=8, max_length=72, description="Password (8-72 chars, bcrypt limit)")
+
+
+class UserLogin(SQLModel):
+    """Request model for user login"""
+    email: str = Field(description="Email address")
+    password: str = Field(description="Password")
+
+
+class UserResponse(SQLModel):
+    """Response model for user data (no password)"""
+    id: int
+    email: str
+    username: str
+    is_active: bool
+    is_verified: bool
+    created_at: datetime
+
+
+class TokenResponse(SQLModel):
+    """Response model for authentication tokens"""
+    access_token: str = Field(description="JWT access token")
+    token_type: str = Field(default="bearer", description="Token type")
+    user: UserResponse = Field(description="Authenticated user data")

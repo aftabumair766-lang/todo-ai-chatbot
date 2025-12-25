@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from backend.config import get_settings
 from backend.db.session import init_db, close_db
 from backend.mcp.server import create_mcp_server
-from backend.api import chat, chatkit
+from backend.api import chat, chatkit, auth
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -104,6 +104,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # ============================================================================
 # API Routes
 # ============================================================================
+
+# Include authentication endpoints (public - no auth required)
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 # Include chat endpoint
 app.include_router(chat.router, prefix="/api", tags=["chat"])

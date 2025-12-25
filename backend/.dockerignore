@@ -1,0 +1,97 @@
+# =============================================================================
+# Backend .dockerignore
+# =============================================================================
+# Exclude unnecessary files from Docker build context
+# This speeds up builds and reduces image size
+# =============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+*.cover
+
+# Logs
+*.log
+logs/
+backend.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Documentation
+*.md
+docs/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Alembic (migrations tracked, but versions can be excluded if not using in container)
+# alembic/versions/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Development scripts
+scripts/
+
+# Tests (optional - remove if running tests in container)
+tests/
+test_*.py
+*_test.py
+
+# README and specs
+README.md
+specs/

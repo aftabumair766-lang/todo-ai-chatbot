@@ -1,0 +1,149 @@
+# =============================================================================
+# Todo AI Chatbot - Frontend Helm Chart Values
+# =============================================================================
+# Default values for todo-frontend chart
+# This is a YAML-formatted file declaring variables to be passed into templates
+# Override these values with --set flag or custom values file
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Replica Configuration
+# -----------------------------------------------------------------------------
+replicaCount: 1  # Number of frontend pods (set to 1 for minimal resources)
+
+# -----------------------------------------------------------------------------
+# Image Configuration
+# -----------------------------------------------------------------------------
+image:
+  repository: todo-frontend
+  pullPolicy: IfNotPresent  # Use Never for Minikube local images
+  tag: "v1"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -----------------------------------------------------------------------------
+# Service Account
+# -----------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# -----------------------------------------------------------------------------
+# Pod Annotations and Labels
+# -----------------------------------------------------------------------------
+podAnnotations: {}
+
+podLabels:
+  app: todo-frontend
+  tier: frontend
+  component: ui
+
+# -----------------------------------------------------------------------------
+# Pod Security Context
+# -----------------------------------------------------------------------------
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 101  # Nginx user
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  type: NodePort  # NodePort for Minikube external access
+  port: 80
+  targetPort: 80
+  nodePort: 30080  # Fixed port for easy access (30000-32767 range)
+  annotations: {}
+
+# -----------------------------------------------------------------------------
+# Resource Limits (Minimal for 2 CPU, 4GB RAM Minikube)
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: 200m      # Maximum 0.2 CPU cores
+    memory: 256Mi  # Maximum 256MB RAM
+  requests:
+    cpu: 100m      # Reserve 0.1 CPU cores
+    memory: 128Mi  # Reserve 128MB RAM
+
+# -----------------------------------------------------------------------------
+# Autoscaling (Disabled for minimal resources)
+# -----------------------------------------------------------------------------
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+# -----------------------------------------------------------------------------
+# Health Checks
+# -----------------------------------------------------------------------------
+livenessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -----------------------------------------------------------------------------
+# Environment Variables
+# -----------------------------------------------------------------------------
+env:
+  # Backend API URL (points to backend service in cluster)
+  VITE_API_URL: "http://todo-backend:8000"
+
+# -----------------------------------------------------------------------------
+# Node Selector, Tolerations, and Affinity
+# -----------------------------------------------------------------------------
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# -----------------------------------------------------------------------------
+# Volumes and Volume Mounts
+# -----------------------------------------------------------------------------
+volumes: []
+volumeMounts: []
+
+# -----------------------------------------------------------------------------
+# Additional Configuration
+# -----------------------------------------------------------------------------
+# Ingress (disabled for Minikube local deployment)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+# Network Policy (optional)
+networkPolicy:
+  enabled: false
+
+# Pod Disruption Budget (optional)
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

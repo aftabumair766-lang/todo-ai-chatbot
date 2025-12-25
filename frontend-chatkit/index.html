@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo AI Chatbot - OpenAI ChatKit</title>
+    <meta name="description" content="Natural language todo management powered by OpenAI">
+
+    <!-- OpenAI ChatKit CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@openai/chatkit@latest/dist/chatkit.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #chatkit-root {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator.connected {
+            color: #10b981;
+        }
+
+        .status-indicator.disconnected {
+            color: #ef4444;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-indicator.connected .status-dot {
+            background: #10b981;
+        }
+
+        .status-indicator.disconnected .status-dot {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .footer {
+            padding: 15px 30px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .status-indicator {
+                top: 10px;
+                right: 10px;
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Todo AI Chatbot</h1>
+            <p>Manage your tasks using natural language</p>
+        </div>
+
+        <div class="chat-container">
+            <div id="chatkit-root">
+                <div class="loading">Loading ChatKit</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Powered by OpenAI ChatKit • Constitution Compliant ✅
+        </div>
+    </div>
+
+    <div id="status-indicator" class="status-indicator disconnected">
+        <span class="status-dot"></span>
+        <span id="status-text">Connecting...</span>
+    </div>
+
+    <!-- OpenAI ChatKit JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/@openai/chatkit@latest/dist/chatkit.min.js"></script>
+
+    <!-- ChatKit Configuration -->
+    <script src="config.js"></script>
+
+    <!-- ChatKit Initialization -->
+    <script>
+        // Initialize ChatKit with configuration
+        async function initChatKit() {
+            try {
+                // Get configuration from config.js
+                const config = window.CHATKIT_CONFIG;
+
+                // Update status
+                updateStatus('connecting', 'Connecting to server...');
+
+                // Test backend connection
+                const healthResponse = await fetch(`${config.backendUrl}/health`);
+                if (!healthResponse.ok) {
+                    throw new Error('Backend not responding');
+                }
+
+                // Initialize ChatKit
+                const chatkit = new ChatKit({
+                    container: document.getElementById('chatkit-root'),
+                    apiKey: config.openaiApiKey,
+                    backendUrl: config.backendUrl,
+                    sessionEndpoint: config.sessionEndpoint,
+                    chatEndpoint: config.chatEndpoint,
+
+                    // Appearance customization
+                    theme: {
+                        primaryColor: '#667eea',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto',
+                    },
+
+                    // Welcome message
+                    welcomeMessage: config.welcomeMessage,
+
+                    // Placeholder text
+                    placeholder: 'Type a message... (e.g., "Add task to buy groceries")',
+
+                    // Enable features
+                    features: {
+                        voiceInput: false,
+                        fileUpload: false,
+                        markdown: true,
+                        codeHighlight: false,
+                    },
+
+                    // Event handlers
+                    onConnect: () => {
+                        console.log('ChatKit connected successfully');
+                        updateStatus('connected', 'Connected');
+                    },
+
+                    onDisconnect: () => {
+                        console.log('ChatKit disconnected');
+                        updateStatus('disconnected', 'Disconnected');
+                    },
+
+                    onError: (error) => {
+                        console.error('ChatKit error:', error);
+                        updateStatus('disconnected', 'Connection error');
+                        alert(`Error: ${error.message}`);
+                    },
+
+                    onMessage: (message) => {
+                        console.log('New message:', message);
+                    }
+                });
+
+                console.log('ChatKit initialized successfully');
+                updateStatus('connected', 'Connected');
+
+            } catch (error) {
+                console.error('Failed to initialize ChatKit:', error);
+                updateStatus('disconnected', 'Failed to connect');
+
+                // Show error message in chat container
+                const chatRoot = document.getElementById('chatkit-root');
+                chatRoot.innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: #ef4444;">
+                        <h3 style="margin-bottom: 10px;">❌ Connection Failed</h3>
+                        <p style="margin-bottom: 20px;">${error.message}</p>
+                        <p style="font-size: 14px; color: #6b7280;">
+                            Make sure the backend server is running at:<br>
+                            <strong>${window.CHATKIT_CONFIG?.backendUrl || 'http://localhost:8000'}</strong>
+                        </p>
+                        <button
+                            onclick="location.reload()"
+                            style="
+                                margin-top: 20px;
+                                padding: 10px 20px;
+                                background: #667eea;
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: 600;
+                            "
+                        >
+                            Retry Connection
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function updateStatus(state, text) {
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+
+            statusIndicator.className = `status-indicator ${state}`;
+            statusText.textContent = text;
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initChatKit);
+        } else {
+            initChatKit();
+        }
+    </script>
+</body>
+</html>

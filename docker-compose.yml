@@ -1,0 +1,147 @@
+# =============================================================================
+# Docker Compose Configuration - Todo AI Chatbot
+# =============================================================================
+# Purpose: Local testing before Kubernetes deployment
+# Use this to verify Docker images work correctly before deploying to Minikube
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Backend Service - FastAPI Application
+  # ===========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: todo-backend:v1
+    container_name: todo-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Database configuration (using external Neon PostgreSQL)
+      DATABASE_URL: ${DATABASE_URL}
+
+      # OpenAI API Key
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # Authentication
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-your-secret-key-here}
+      BETTER_AUTH_ISSUER: ${BETTER_AUTH_ISSUER:-http://localhost:8000}
+
+      # Application settings
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost
+      RATE_LIMIT_PER_MINUTE: 10
+
+      # Redis (optional for rate limiting)
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - todo-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Frontend Service - React + Nginx
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: todo-frontend:v1
+    container_name: todo-frontend
+    ports:
+      - "80:80"
+    environment:
+      # Backend API URL (points to backend service)
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - todo-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Redis Service - Rate Limiting & Caching
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: todo-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - todo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  todo-network:
+    driver: bridge
+    name: todo-network
+
+# =============================================================================
+# Usage Instructions:
+# =============================================================================
+# 1. Create a .env file in the project root with:
+#    DATABASE_URL=postgresql+asyncpg://user:pass@host/db
+#    OPENAI_API_KEY=sk-proj-...
+#    BETTER_AUTH_SECRET=your-32-char-secret
+#
+# 2. Start all services:
+#    docker-compose up -d
+#
+# 3. View logs:
+#    docker-compose logs -f
+#
+# 4. Check service health:
+#    docker-compose ps
+#
+# 5. Access application:
+#    Frontend: http://localhost
+#    Backend API: http://localhost:8000
+#    API Docs: http://localhost:8000/docs
+#
+# 6. Stop services:
+#    docker-compose down
+#
+# 7. Rebuild images:
+#    docker-compose build --no-cache
+#
+# 8. Remove all containers and volumes:
+#    docker-compose down -v
+# =============================================================================
+
+# =============================================================================
+# Docker AI (Gordon) Commands:
+# =============================================================================
+# Build with Docker AI:
+#   docker ai "Build and start all services from this docker-compose file"
+#
+# Optimize:
+#   docker ai "Optimize this docker-compose configuration for production"
+#
+# Debug:
+#   docker ai "Why is my backend service failing to connect to Redis?"
+# =============================================================================

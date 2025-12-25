@@ -1,0 +1,44 @@
+# =============================================================================
+# Todo AI Chatbot - Frontend Helm Chart Metadata
+# =============================================================================
+# This file defines the Helm chart metadata for the frontend service
+# Phase IV: Kubernetes Deployment with AI-Assisted DevOps
+# =============================================================================
+
+apiVersion: v2
+name: todo-frontend
+description: A Helm chart for Todo AI Chatbot Frontend (React + TypeScript + Nginx)
+type: application
+
+# Chart version - increment when making changes to the chart
+version: 1.0.0
+
+# Application version - the version of the frontend application being deployed
+appVersion: "1.0.0"
+
+# Keywords for chart discovery
+keywords:
+  - todo
+  - chatbot
+  - ai
+  - react
+  - typescript
+  - nginx
+  - spa
+  - kubernetes
+
+# Maintainers
+maintainers:
+  - name: Umair
+    email: umair@todo-chatbot.com
+
+# Sources
+sources:
+  - https://github.com/aftabumair766-lang/todo-ai-chatbot
+
+# Annotations for better metadata
+annotations:
+  category: Application
+  deployment.type: Frontend
+  framework: React
+  server: Nginx

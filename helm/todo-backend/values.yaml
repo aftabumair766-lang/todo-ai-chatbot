@@ -1,0 +1,163 @@
+# =============================================================================
+# Todo AI Chatbot - Backend Helm Chart Values
+# =============================================================================
+# Default values for todo-backend chart
+# This is a YAML-formatted file declaring variables to be passed into templates
+# Override these values with --set flag or custom values file
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Replica Configuration
+# -----------------------------------------------------------------------------
+replicaCount: 1  # Number of backend pods (set to 1 for minimal resources)
+
+# -----------------------------------------------------------------------------
+# Image Configuration
+# -----------------------------------------------------------------------------
+image:
+  repository: todo-backend
+  pullPolicy: IfNotPresent  # Use Never for Minikube local images
+  tag: "v1"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -----------------------------------------------------------------------------
+# Service Account
+# -----------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# -----------------------------------------------------------------------------
+# Pod Annotations and Labels
+# -----------------------------------------------------------------------------
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+
+podLabels:
+  app: todo-backend
+  tier: backend
+  component: api
+
+# -----------------------------------------------------------------------------
+# Pod Security Context
+# -----------------------------------------------------------------------------
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  type: ClusterIP  # Internal service (accessed by frontend)
+  port: 8000
+  targetPort: 8000
+  annotations: {}
+
+# -----------------------------------------------------------------------------
+# Resource Limits (Minimal for 2 CPU, 4GB RAM Minikube)
+# -----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: 500m      # Maximum 0.5 CPU cores
+    memory: 512Mi  # Maximum 512MB RAM
+  requests:
+    cpu: 250m      # Reserve 0.25 CPU cores
+    memory: 256Mi  # Reserve 256MB RAM
+
+# -----------------------------------------------------------------------------
+# Autoscaling (Disabled for minimal resources)
+# -----------------------------------------------------------------------------
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+# -----------------------------------------------------------------------------
+# Health Checks
+# -----------------------------------------------------------------------------
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -----------------------------------------------------------------------------
+# Environment Variables (Non-Sensitive)
+# -----------------------------------------------------------------------------
+env:
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO
+  CORS_ORIGINS: "*"  # Update for production
+  RATE_LIMIT_PER_MINUTE: "10"
+  REDIS_URL: redis://localhost:6379/0
+
+# -----------------------------------------------------------------------------
+# Secrets (Sensitive Environment Variables)
+# -----------------------------------------------------------------------------
+# These should be created separately using kubectl or --set-file
+secrets:
+  # OPENAI_API_KEY: ""          # Set via kubectl or --set
+  # DATABASE_URL: ""            # Set via kubectl or --set
+  # BETTER_AUTH_SECRET: ""      # Set via kubectl or --set
+  # BETTER_AUTH_ISSUER: ""      # Set via kubectl or --set
+
+# -----------------------------------------------------------------------------
+# Node Selector, Tolerations, and Affinity
+# -----------------------------------------------------------------------------
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# -----------------------------------------------------------------------------
+# Volumes and Volume Mounts
+# -----------------------------------------------------------------------------
+volumes: []
+volumeMounts: []
+
+# -----------------------------------------------------------------------------
+# Additional Configuration
+# -----------------------------------------------------------------------------
+# Ingress (disabled for Minikube local deployment)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+# Network Policy (optional)
+networkPolicy:
+  enabled: false
+
+# Pod Disruption Budget (optional)
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

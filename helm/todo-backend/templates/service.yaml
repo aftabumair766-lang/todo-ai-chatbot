@@ -1,0 +1,26 @@
+# =============================================================================
+# Backend Service - Kubernetes Manifest
+# =============================================================================
+# This template creates a Service resource for the backend
+# Type: ClusterIP (internal access only, accessed by frontend)
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "todo-backend.fullname" . }}
+  labels:
+    {{- include "todo-backend.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todo-backend.selectorLabels" . | nindent 4 }}

@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './App.css';
+import { Language, getTranslation, detectLanguage } from './translations';
 
 // API Configuration
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -17,9 +18,38 @@ interface Message {
   content: string;
 }
 
+interface User {
+  id: number;
+  email: string;
+  username: string;
+}
+
 function App() {
-  const [authToken, setAuthToken] = useState<string>('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Language state with localStorage persistence
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('chatbot-language');
+    return (saved as Language) || detectLanguage();
+  });
+
+  // Auth state
+  const [authToken, setAuthToken] = useState<string>(() => {
+    return localStorage.getItem('auth-token') || '';
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!localStorage.getItem('auth-token');
+  });
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+
+  // Login/Register form state
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Chat state
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [conversationId, setConversationId] = useState<number | null>(null);
@@ -27,17 +57,91 @@ function App() {
   const [error, setError] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Get current translations
+  const t = getTranslation(language);
+
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('chatbot-language', language);
+  }, [language]);
+
+  // Handle language change
+  const handleLanguageChange = (newLang: Language) => {
+    setLanguage(newLang);
+  };
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle authentication
-  const handleLogin = (e: React.FormEvent) => {
+  // Handle Login
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (authToken.trim()) {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await axios.post(`${API_URL}/api/auth/login`, {
+        email: email,
+        password: password
+      });
+
+      const { access_token, user: userData } = response.data;
+
+      // Save token and user to state and localStorage
+      setAuthToken(access_token);
+      setUser(userData);
       setIsAuthenticated(true);
+      localStorage.setItem('auth-token', access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      // Reset form
+      setEmail('');
+      setPassword('');
       setError('');
+    } catch (err: any) {
+      console.error('Login failed:', err);
+      const errorMessage = err.response?.data?.detail || 'Login failed';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle Registration
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await axios.post(`${API_URL}/api/auth/register`, {
+        email: email,
+        username: username,
+        password: password
+      });
+
+      const { access_token, user: userData } = response.data;
+
+      // Save token and user to state and localStorage
+      setAuthToken(access_token);
+      setUser(userData);
+      setIsAuthenticated(true);
+      localStorage.setItem('auth-token', access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      // Reset form
+      setEmail('');
+      setUsername('');
+      setPassword('');
+      setError('');
+    } catch (err: any) {
+      console.error('Registration failed:', err);
+      const errorMessage = err.response?.data?.detail || 'Registration failed';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -89,7 +193,7 @@ function App() {
       // Add error message to chat
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: `⚠️ Error: ${errorMessage}` }
+        { role: 'assistant', content: `${t.errorPrefix} ${errorMessage}` }
       ]);
     } finally {
       setIsLoading(false);
@@ -100,9 +204,12 @@ function App() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setAuthToken('');
+    setUser(null);
     setMessages([]);
     setConversationId(null);
     setError('');
+    localStorage.removeItem('auth-token');
+    localStorage.removeItem('user');
   };
 
   // Authentication Screen
@@ -110,21 +217,102 @@ function App() {
     return (
       <div className="auth-container">
         <div className="auth-box">
-          <h1>🤖 Todo AI Chatbot</h1>
-          <p>Manage your tasks with natural language</p>
-          <form onSubmit={handleLogin}>
-            <input
-              type="text"
-              placeholder="Enter auth token (use 'test' for demo)"
-              value={authToken}
-              onChange={(e) => setAuthToken(e.target.value)}
-              className="auth-input"
-              autoFocus
-            />
-            <button type="submit" className="auth-button">
-              Login
+          {/* Language Selector on Auth Screen */}
+          <div className="language-selector-auth">
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value as Language)}
+              className="language-dropdown"
+            >
+              <option value="en">{t.languageEnglish}</option>
+              <option value="ur">{t.languageUrdu}</option>
+              <option value="zh">{t.languageChinese}</option>
+            </select>
+          </div>
+
+          <h1>{t.appTitle}</h1>
+          <p>{t.appSubtitle}</p>
+
+          {/* Auth Mode Tabs */}
+          <div className="auth-tabs">
+            <button
+              className={`auth-tab ${authMode === 'login' ? 'active' : ''}`}
+              onClick={() => { setAuthMode('login'); setError(''); }}
+            >
+              {t.loginButton}
             </button>
-          </form>
+            <button
+              className={`auth-tab ${authMode === 'register' ? 'active' : ''}`}
+              onClick={() => { setAuthMode('register'); setError(''); }}
+            >
+              Register
+            </button>
+          </div>
+
+          {/* Login Form */}
+          {authMode === 'login' && (
+            <form onSubmit={handleLogin}>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="auth-input"
+                required
+                autoFocus
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="auth-input"
+                required
+              />
+              <button type="submit" className="auth-button" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : t.loginButton}
+              </button>
+            </form>
+          )}
+
+          {/* Register Form */}
+          {authMode === 'register' && (
+            <form onSubmit={handleRegister}>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="auth-input"
+                required
+                autoFocus
+              />
+              <input
+                type="text"
+                placeholder="Username (3-100 chars)"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="auth-input"
+                minLength={3}
+                maxLength={100}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password (8-72 chars)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="auth-input"
+                minLength={8}
+                maxLength={72}
+                required
+              />
+              <button type="submit" className="auth-button" disabled={isLoading}>
+                {isLoading ? 'Creating account...' : 'Create Account'}
+              </button>
+            </form>
+          )}
+
           {error && <div className="error-message">{error}</div>}
         </div>
       </div>
@@ -136,11 +324,28 @@ function App() {
     <div className="app-container">
       {/* Header */}
       <div className="app-header">
-        <h1>🤖 Todo AI Chatbot</h1>
-        <p>Natural language task management</p>
-        <button onClick={handleLogout} className="logout-button">
-          Logout
-        </button>
+        <div className="header-left">
+          <h1>{t.appTitle}</h1>
+          <p>{t.appSubtitle}</p>
+        </div>
+        <div className="header-right">
+          {/* Language Selector */}
+          <div className="language-selector">
+            <label>{t.selectLanguage}:</label>
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value as Language)}
+              className="language-dropdown"
+            >
+              <option value="en">🇬🇧 {t.languageEnglish}</option>
+              <option value="ur">🇵🇰 {t.languageUrdu}</option>
+              <option value="zh">🇨🇳 {t.languageChinese}</option>
+            </select>
+          </div>
+          <button onClick={handleLogout} className="logout-button">
+            {t.logoutButton}
+          </button>
+        </div>
       </div>
 
       {/* Chat Container */}
@@ -149,14 +354,14 @@ function App() {
         <div className="messages-container">
           {messages.length === 0 ? (
             <div className="welcome-message">
-              <h2>👋 Welcome!</h2>
-              <p>I can help you manage your tasks using natural language.</p>
+              <h2>{t.welcomeTitle}</h2>
+              <p>{t.welcomeDescription}</p>
               <ul>
-                <li>"Add a task to buy groceries"</li>
-                <li>"Show me all my tasks"</li>
-                <li>"Mark task 1 as complete"</li>
-                <li>"Delete task 2"</li>
-                <li>"Update task 3 to call mom at 6pm"</li>
+                <li>{t.exampleAdd}</li>
+                <li>{t.exampleList}</li>
+                <li>{t.exampleComplete}</li>
+                <li>{t.exampleDelete}</li>
+                <li>{t.exampleUpdate}</li>
               </ul>
             </div>
           ) : (
@@ -190,7 +395,7 @@ function App() {
         <form onSubmit={handleSendMessage} className="input-container">
           <input
             type="text"
-            placeholder="Type your message... (e.g., 'Add a task to buy groceries')"
+            placeholder={t.inputPlaceholder}
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             disabled={isLoading}
@@ -202,7 +407,7 @@ function App() {
             disabled={isLoading || !inputMessage.trim()}
             className="send-button"
           >
-            Send
+            {t.sendButton}
           </button>
         </form>
 

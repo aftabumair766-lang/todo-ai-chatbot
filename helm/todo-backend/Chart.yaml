@@ -1,0 +1,43 @@
+# =============================================================================
+# Todo AI Chatbot - Backend Helm Chart Metadata
+# =============================================================================
+# This file defines the Helm chart metadata for the backend service
+# Phase IV: Kubernetes Deployment with AI-Assisted DevOps
+# =============================================================================
+
+apiVersion: v2
+name: todo-backend
+description: A Helm chart for Todo AI Chatbot Backend (FastAPI + OpenAI + MCP)
+type: application
+
+# Chart version - increment when making changes to the chart
+version: 1.0.0
+
+# Application version - the version of the backend application being deployed
+appVersion: "1.0.0"
+
+# Keywords for chart discovery
+keywords:
+  - todo
+  - chatbot
+  - ai
+  - fastapi
+  - openai
+  - mcp
+  - kubernetes
+
+# Maintainers
+maintainers:
+  - name: Umair
+    email: umair@todo-chatbot.com
+
+# Sources
+sources:
+  - https://github.com/aftabumair766-lang/todo-ai-chatbot
+
+# Annotations for better metadata
+annotations:
+  category: Application
+  deployment.type: Microservice
+  ai.enabled: "true"
+  mcp.protocol: "true"
