@@ -11,6 +11,9 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'common'))
 from dapr.state import DaprStateStore
 
+# Import event publisher
+from .events import get_event_publisher
+
 
 # Pydantic models for API
 class TaskCreate(BaseModel):
@@ -100,7 +103,16 @@ async def create_task(task_data: TaskCreate) -> TaskResponse:
         data=task
     )
 
-    # TODO: Publish task.created event (T036)
+    # Publish task.created event to Kafka
+    event_publisher = get_event_publisher()
+    await event_publisher.publish_task_created(
+        task_id=task_id,
+        user_id=task_data.user_id,
+        title=task_data.title,
+        recurring_task_id=task_data.recurring_task_id,
+        due_date=task_data.due_date,
+        created_at=datetime.fromisoformat(task["created_at"])
+    )
 
     return TaskResponse(**task)
 
@@ -203,13 +215,14 @@ async def update_task(task_id: UUID, user_id: str, update_data: TaskUpdate) -> T
         )
 
     # Update fields
+    task_completed = False
     if update_data.title is not None:
         task["title"] = update_data.title
     if update_data.completed is not None:
         task["completed"] = update_data.completed
         if update_data.completed and not task.get("completed_at"):
             task["completed_at"] = datetime.utcnow().isoformat()
-            # TODO: Publish task.completed event (T036)
+            task_completed = True
     if update_data.due_date is not None:
         task["due_date"] = update_data.due_date.isoformat()
 
@@ -220,6 +233,16 @@ async def update_task(task_id: UUID, user_id: str, update_data: TaskUpdate) -> T
         entity_id=str(task_id),
         data=task
     )
+
+    # Publish task.completed event to Kafka if task was just completed
+    if task_completed:
+        event_publisher = get_event_publisher()
+        await event_publisher.publish_task_completed(
+            task_id=task_id,
+            user_id=user_id,
+            title=task["title"],
+            completed_at=datetime.fromisoformat(task["completed_at"])
+        )
 
     return TaskResponse(**task)
 
@@ -262,6 +285,12 @@ async def delete_task(task_id: UUID, user_id: str):
         entity_id=str(task_id)
     )
 
-    # TODO: Publish task.deleted event (T036)
+    # Publish task.deleted event to Kafka
+    event_publisher = get_event_publisher()
+    await event_publisher.publish_task_deleted(
+        task_id=task_id,
+        user_id=user_id,
+        deleted_at=datetime.utcnow()
+    )
 
     return None

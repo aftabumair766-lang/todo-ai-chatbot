@@ -89,11 +89,20 @@ async def root():
     }
 
 
-# Import task CRUD router
+# Import task CRUD router and event publisher
 from handlers import task_crud
+from handlers.events import init_event_publisher
 
 # Initialize task CRUD router with state store (done after lifespan startup)
 task_crud.init_router(state_store)
+
+# Initialize event publisher with pubsub (done after lifespan startup)
+@app.on_event("startup")
+async def startup_event():
+    """Initialize event publisher after pubsub is ready"""
+    if pubsub:
+        init_event_publisher(pubsub)
+        print("✅ Task Event Publisher initialized")
 
 # Include task CRUD router
 app.include_router(task_crud.router)
