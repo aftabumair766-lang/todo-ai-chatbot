@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.notificationService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "todo-app.notificationService.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.notificationService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.notificationService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.notificationService.name }}
+        {{- include "todo-app.notificationService.labels" . | nindent 8 }}
+      annotations:
+        {{- if .Values.notificationService.dapr.enabled }}
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.notificationService.dapr.appId }}
+        dapr.io/app-port: "{{ .Values.notificationService.dapr.appPort }}"
+        dapr.io/log-level: {{ .Values.notificationService.dapr.logLevel }}
+        dapr.io/sidecar-cpu-request: {{ .Values.dapr.sidecarCPURequest }}
+        dapr.io/sidecar-memory-request: {{ .Values.dapr.sidecarMemoryRequest }}
+        dapr.io/sidecar-cpu-limit: {{ .Values.dapr.sidecarCPULimit }}
+        dapr.io/sidecar-memory-limit: {{ .Values.dapr.sidecarMemoryLimit }}
+        {{- end }}
+    spec:
+      containers:
+      - name: {{ .Values.notificationService.name }}
+        image: "{{ .Values.notificationService.image.repository }}:{{ .Values.notificationService.image.tag }}"
+        imagePullPolicy: {{ .Values.notificationService.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.notificationService.service.port }}
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: {{ .Values.global.environment }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.notificationService.resources | nindent 10 }}

@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Todo Chatbot Event Schemas",
+  "description": "JSON Schema definitions for all Kafka domain events (CloudEvents data payloads)",
+  "definitions": {
+    "TaskCreated": {
+      "type": "object",
+      "title": "task.created event payload",
+      "required": ["task_id", "user_id", "title", "created_at"],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique task identifier"
+        },
+        "user_id": {
+          "type": "string",
+          "description": "Owner user ID from Better Auth"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Task title"
+        },
+        "description": {
+          "type": ["string", "null"],
+          "maxLength": 2000,
+          "description": "Optional task description"
+        },
+        "due_date": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Optional due date for reminder calculation"
+        },
+        "recurring_task_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "description": "If generated from recurring task, the template ID"
+        },
+        "instance_date": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "For recurring tasks, the date this instance represents"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "TaskCompleted": {
+      "type": "object",
+      "title": "task.completed event payload",
+      "required": ["task_id", "user_id", "title", "completed_at"],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "RecurringTaskCreated": {
+      "type": "object",
+      "title": "recurring-task.created event payload",
+      "required": ["recurring_task_id", "user_id", "title", "recurrence_rule", "timezone", "next_generation_time"],
+      "properties": {
+        "recurring_task_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "description": {
+          "type": ["string", "null"],
+          "maxLength": 2000
+        },
+        "recurrence_rule": {
+          "type": "string",
+          "description": "Cron expression or iCalendar RRULE"
+        },
+        "timezone": {
+          "type": "string",
+          "default": "UTC",
+          "description": "User timezone for recurrence calculation"
+        },
+        "next_generation_time": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "ReminderTriggered": {
+      "type": "object",
+      "title": "reminder.triggered event payload",
+      "required": ["reminder_id", "task_id", "user_id", "task_title", "notification_channel", "trigger_time"],
+      "properties": {
+        "reminder_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "task_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "task_title": {
+          "type": "string"
+        },
+        "notification_channel": {
+          "type": "string",
+          "enum": ["email", "sms", "chat", "webhook"]
+        },
+        "notification_metadata": {
+          "type": "object",
+          "description": "Channel-specific data (email address, phone, etc.)"
+        },
+        "trigger_time": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "ReminderCanceled": {
+      "type": "object",
+      "title": "reminder.canceled event payload",
+      "required": ["reminder_id", "task_id", "user_id", "reason"],
+      "properties": {
+        "reminder_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "task_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string",
+          "enum": ["task_completed", "task_deleted", "user_canceled"],
+          "description": "Why reminder was canceled"
+        },
+        "canceled_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

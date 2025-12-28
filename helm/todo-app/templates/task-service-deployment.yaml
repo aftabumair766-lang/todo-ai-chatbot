@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.taskService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "todo-app.taskService.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.taskService.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.taskService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.taskService.name }}
+        {{- include "todo-app.taskService.labels" . | nindent 8 }}
+      annotations:
+        {{- if .Values.taskService.dapr.enabled }}
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.taskService.dapr.appId }}
+        dapr.io/app-port: "{{ .Values.taskService.dapr.appPort }}"
+        dapr.io/log-level: {{ .Values.taskService.dapr.logLevel }}
+        dapr.io/sidecar-cpu-request: {{ .Values.dapr.sidecarCPURequest }}
+        dapr.io/sidecar-memory-request: {{ .Values.dapr.sidecarMemoryRequest }}
+        dapr.io/sidecar-cpu-limit: {{ .Values.dapr.sidecarCPULimit }}
+        dapr.io/sidecar-memory-limit: {{ .Values.dapr.sidecarMemoryLimit }}
+        {{- end }}
+    spec:
+      containers:
+      - name: {{ .Values.taskService.name }}
+        image: "{{ .Values.taskService.image.repository }}:{{ .Values.taskService.image.tag }}"
+        imagePullPolicy: {{ .Values.taskService.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.taskService.service.port }}
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: {{ .Values.global.environment }}
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: todo-secrets
+              key: DATABASE_URL
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.taskService.resources | nindent 10 }}

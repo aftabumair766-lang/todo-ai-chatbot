@@ -1,0 +1,58 @@
+# Production environment values (Cloud K8s)
+global:
+  environment: production
+  namespace: todo-app
+
+apiGateway:
+  replicaCount: 3
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+taskService:
+  replicaCount: 3
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+schedulerService:
+  replicaCount: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+notificationService:
+  replicaCount: 3
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+dapr:
+  sidecarCPURequest: "200m"
+  sidecarMemoryRequest: "256Mi"
+  sidecarCPULimit: "500m"
+  sidecarMemoryLimit: "512Mi"

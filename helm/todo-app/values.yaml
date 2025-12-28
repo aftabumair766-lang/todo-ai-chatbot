@@ -1,0 +1,122 @@
+# Default values for todo-app (Production)
+# This is a YAML-formatted file.
+
+global:
+  environment: production
+  namespace: todo-app
+
+# API Gateway Service
+apiGateway:
+  name: api-gateway
+  replicaCount: 2
+  image:
+    repository: todo-api-gateway
+    tag: v1
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  dapr:
+    enabled: true
+    appId: api-gateway
+    appPort: 8000
+    logLevel: info
+
+# Task Service
+taskService:
+  name: task-service
+  replicaCount: 2
+  image:
+    repository: todo-task-service
+    tag: v1
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8001
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  dapr:
+    enabled: true
+    appId: task-service
+    appPort: 8001
+    logLevel: info
+
+# Scheduler Service
+schedulerService:
+  name: scheduler-service
+  replicaCount: 1
+  image:
+    repository: todo-scheduler-service
+    tag: v1
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8002
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  dapr:
+    enabled: true
+    appId: scheduler-service
+    appPort: 8002
+    logLevel: info
+
+# Notification Service
+notificationService:
+  name: notification-service
+  replicaCount: 2
+  image:
+    repository: todo-notification-service
+    tag: v1
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8003
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  dapr:
+    enabled: true
+    appId: notification-service
+    appPort: 8003
+    logLevel: info
+
+# Dapr Configuration
+dapr:
+  enabled: true
+  sidecarCPURequest: "100m"
+  sidecarMemoryRequest: "128Mi"
+  sidecarCPULimit: "200m"
+  sidecarMemoryLimit: "256Mi"
+
+# External Dependencies Configuration
+postgresql:
+  host: ""  # Set via secrets
+  port: 5432
+  database: tododb
+
+kafka:
+  bootstrapServers: ""  # Set via secrets (Redpanda Cloud)
+
+sendgrid:
+  apiKey: ""  # Set via secrets

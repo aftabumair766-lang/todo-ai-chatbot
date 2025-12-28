@@ -1,0 +1,50 @@
+# Development environment values (Minikube)
+global:
+  environment: development
+  namespace: todo-app-dev
+
+apiGateway:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+taskService:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+schedulerService:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+notificationService:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+dapr:
+  sidecarCPURequest: "50m"
+  sidecarMemoryRequest: "64Mi"
+  sidecarCPULimit: "100m"
+  sidecarMemoryLimit: "128Mi"

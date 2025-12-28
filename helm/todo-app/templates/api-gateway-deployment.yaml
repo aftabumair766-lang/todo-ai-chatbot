@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.apiGateway.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "todo-app.apiGateway.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.apiGateway.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.apiGateway.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.apiGateway.name }}
+        {{- include "todo-app.apiGateway.labels" . | nindent 8 }}
+      annotations:
+        {{- if .Values.apiGateway.dapr.enabled }}
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ .Values.apiGateway.dapr.appId }}
+        dapr.io/app-port: "{{ .Values.apiGateway.dapr.appPort }}"
+        dapr.io/log-level: {{ .Values.apiGateway.dapr.logLevel }}
+        dapr.io/sidecar-cpu-request: {{ .Values.dapr.sidecarCPURequest }}
+        dapr.io/sidecar-memory-request: {{ .Values.dapr.sidecarMemoryRequest }}
+        dapr.io/sidecar-cpu-limit: {{ .Values.dapr.sidecarCPULimit }}
+        dapr.io/sidecar-memory-limit: {{ .Values.dapr.sidecarMemoryLimit }}
+        {{- end }}
+    spec:
+      containers:
+      - name: {{ .Values.apiGateway.name }}
+        image: "{{ .Values.apiGateway.image.repository }}:{{ .Values.apiGateway.image.tag }}"
+        imagePullPolicy: {{ .Values.apiGateway.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.apiGateway.service.port }}
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: {{ .Values.global.environment }}
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: todo-secrets
+              key: OPENAI_API_KEY
+        - name: BETTER_AUTH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: todo-secrets
+              key: BETTER_AUTH_SECRET
+        - name: BETTER_AUTH_ISSUER
+          valueFrom:
+            secretKeyRef:
+              name: todo-secrets
+              key: BETTER_AUTH_ISSUER
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.apiGateway.resources | nindent 10 }}

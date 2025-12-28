@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.taskService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "todo-app.taskService.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.taskService.service.type }}
+  ports:
+  - port: {{ .Values.taskService.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: {{ .Values.taskService.name }}

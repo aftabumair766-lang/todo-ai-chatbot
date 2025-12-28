@@ -1,0 +1,49 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+  namespace: todo-app
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  # Kafka brokers from Redpanda Cloud
+  - name: brokers
+    secretKeyRef:
+      name: todo-secrets
+      key: KAFKA_BOOTSTRAP_SERVERS
+  # Consumer group for this application
+  - name: consumerGroup
+    value: "todo-app-group"
+  # Client ID
+  - name: clientID
+    value: "todo-app"
+  # Authentication mode (SASL/SCRAM for Redpanda Cloud)
+  - name: authType
+    value: "password"
+  # SASL username
+  - name: saslUsername
+    secretKeyRef:
+      name: todo-secrets
+      key: KAFKA_SASL_USERNAME
+  # SASL password
+  - name: saslPassword
+    secretKeyRef:
+      name: todo-secrets
+      key: KAFKA_SASL_PASSWORD
+  # SASL mechanism
+  - name: saslMechanism
+    value: "SCRAM-SHA-256"
+  # Enable TLS
+  - name: enableTLS
+    value: "true"
+  # Consumer auto-offset-reset
+  - name: consumeRetryInterval
+    value: "200ms"
+  # Max message bytes
+  - name: maxMessageBytes
+    value: "1024000"
+scopes:
+- task-service
+- scheduler-service
+- notification-service

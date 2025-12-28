@@ -1,0 +1,8 @@
+# Notification Service Dependencies
+-r ../common/requirements.txt
+
+# Email sending (via Dapr binding)
+# SendGrid integration handled by Dapr
+
+# Event streaming
+cloudevents==1.10.1

@@ -1,0 +1,9 @@
+# Task Service Dependencies
+-r ../common/requirements.txt
+
+# Database ORM
+sqlmodel==0.0.14
+asyncpg==0.29.0
+
+# Event streaming
+cloudevents==1.10.1

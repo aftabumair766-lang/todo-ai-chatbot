@@ -1,0 +1,22 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: email-binding
+  namespace: todo-app
+spec:
+  type: bindings.twilio.sendgrid
+  version: v1
+  metadata:
+  # SendGrid API key from Kubernetes secret
+  - name: apiKey
+    secretKeyRef:
+      name: todo-secrets
+      key: SENDGRID_API_KEY
+  # Default from email address
+  - name: emailFrom
+    value: "noreply@todo-chatbot.app"
+  # Default from name
+  - name: emailFromName
+    value: "Todo Chatbot"
+scopes:
+- notification-service

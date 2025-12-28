@@ -1,0 +1,16 @@
+apiVersion: v2
+name: todo-app
+description: Cloud-Native Event-Driven Todo Chatbot with Dapr and Kafka
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - todo
+  - chatbot
+  - dapr
+  - kafka
+  - microservices
+  - event-driven
+maintainers:
+  - name: Umair Aftab
+    email: aftabumair766@gmail.com

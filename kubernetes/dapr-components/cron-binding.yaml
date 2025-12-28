@@ -1,0 +1,17 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: cron-binding
+  namespace: todo-app
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+  # Run every 1 minute
+  - name: schedule
+    value: "@every 1m"
+  # Direction (input only - triggers events)
+  - name: direction
+    value: "input"
+scopes:
+- scheduler-service

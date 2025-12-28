@@ -1,0 +1,110 @@
+# Dapr Component Configurations for Cloud-Native Deployment
+# Store these in kubernetes/dapr-components/ directory
+
+---
+# PostgreSQL State Store
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+spec:
+  type: state.postgresql
+  version: v1
+  metadata:
+  - name: connectionString
+    secretKeyRef:
+      name: dapr-secrets
+      key: postgres-connection-string
+  - name: tableName
+    value: "dapr_state"
+  - name: metadataTableName
+    value: "dapr_metadata"
+  - name: keyPrefix
+    value: ""  # No global prefix, using app-specific prefixes in keys
+scopes:
+- task-service
+- scheduler-service
+- api-gateway
+
+---
+# Kafka (Redpanda Cloud) Pub/Sub
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    value: "bootstrap.redpanda.cloud:9092"
+  - name: authType
+    value: "password"  # SASL/SCRAM
+  - name: saslUsername
+    secretKeyRef:
+      name: dapr-secrets
+      key: kafka-username
+  - name: saslPassword
+    secretKeyRef:
+      name: dapr-secrets
+      key: kafka-password
+  - name: consumerGroup
+    value: "{appId}"  # Uses Dapr app-id as consumer group
+  - name: clientID
+    value: "{appId}"
+scopes:
+- task-service
+- scheduler-service
+- notification-service
+
+---
+# Kubernetes Secrets Store
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: secretstore
+spec:
+  type: secretstores.kubernetes
+  version: v1
+  metadata: []
+scopes:
+- api-gateway
+- task-service
+- scheduler-service
+- notification-service
+
+---
+# Email Binding (SendGrid) for Notifications
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: email-binding
+spec:
+  type: bindings.sendgrid
+  version: v1
+  metadata:
+  - name: apiKey
+    secretKeyRef:
+      name: dapr-secrets
+      key: sendgrid-api-key
+  - name: emailFrom
+    value: "noreply@todoapp.com"
+  - name: emailFromName
+    value: "Todo AI Chatbot"
+scopes:
+- notification-service
+
+---
+# Cron Binding for Scheduler
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: scheduler-cron
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+  - name: schedule
+    value: "@every 1m"  # Run every minute to check for due reminders
+scopes:
+- scheduler-service

@@ -1,0 +1,12 @@
+# API Gateway Service Dependencies
+-r ../common/requirements.txt
+
+# Authentication
+pyjwt==2.8.0
+python-multipart==0.0.6
+
+# HTTP Client for service invocation
+httpx==0.26.0
+
+# OpenAI for AI agent
+openai==1.9.0

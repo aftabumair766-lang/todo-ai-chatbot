@@ -1,0 +1,127 @@
+# Dapr Component: State Store (PostgreSQL)
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: state.postgresql
+  version: v1
+  metadata:
+  - name: connectionString
+    secretKeyRef:
+      name: todo-secrets
+      key: DATABASE_URL
+  - name: tableName
+    value: "dapr_state"
+  - name: metadataTableName
+    value: "dapr_metadata"
+  - name: timeout
+    value: "20"
+  - name: cleanupIntervalInSeconds
+    value: "3600"
+scopes:
+- task-service
+- scheduler-service
+
+# Dapr Component: Pub/Sub (Kafka/Redpanda)
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    secretKeyRef:
+      name: todo-secrets
+      key: KAFKA_BOOTSTRAP_SERVERS
+  - name: consumerGroup
+    value: "todo-app-group"
+  - name: clientID
+    value: "todo-app"
+  - name: authType
+    value: "password"
+  - name: saslUsername
+    secretKeyRef:
+      name: todo-secrets
+      key: KAFKA_SASL_USERNAME
+  - name: saslPassword
+    secretKeyRef:
+      name: todo-secrets
+      key: KAFKA_SASL_PASSWORD
+  - name: saslMechanism
+    value: "SCRAM-SHA-256"
+  - name: enableTLS
+    value: "true"
+  - name: consumeRetryInterval
+    value: "200ms"
+  - name: maxMessageBytes
+    value: "1024000"
+scopes:
+- task-service
+- scheduler-service
+- notification-service
+
+# Dapr Component: Secret Store (Kubernetes)
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: secretstore
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: secretstores.kubernetes
+  version: v1
+  metadata:
+  - name: defaultNamespace
+    value: {{ .Values.global.namespace | quote }}
+scopes:
+- api-gateway
+- task-service
+- scheduler-service
+- notification-service
+
+# Dapr Component: Email Binding (SendGrid)
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: email-binding
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: bindings.twilio.sendgrid
+  version: v1
+  metadata:
+  - name: apiKey
+    secretKeyRef:
+      name: todo-secrets
+      key: SENDGRID_API_KEY
+  - name: emailFrom
+    value: "noreply@todo-chatbot.app"
+  - name: emailFromName
+    value: "Todo Chatbot"
+scopes:
+- notification-service
+
+# Dapr Component: Cron Binding (Scheduler)
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: cron-binding
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: bindings.cron
+  version: v1
+  metadata:
+  - name: schedule
+    value: "@every 1m"
+  - name: direction
+    value: "input"
+scopes:
+- scheduler-service
