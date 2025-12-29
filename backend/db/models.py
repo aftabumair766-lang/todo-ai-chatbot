@@ -58,6 +58,11 @@ class Task(SQLModel, table=True):
     Constitution Compliance:
     - Principle V: Database as Source of Truth
     - Principle IV: Security First (user_id filtering)
+
+    Phase 5 Features:
+    - Recurring tasks (daily, weekly, monthly)
+    - Due dates & reminders
+    - Priority levels (low, medium, high, urgent)
     """
     __tablename__ = "tasks"
 
@@ -66,6 +71,21 @@ class Task(SQLModel, table=True):
     title: str = Field(max_length=500, nullable=False, description="Task title")
     description: Optional[str] = Field(default=None, max_length=2000, description="Optional task details")
     completed: bool = Field(default=False, nullable=False, description="Completion status")
+
+    # Phase 5: Priority feature
+    priority: str = Field(default="medium", nullable=False, description="Priority: low, medium, high, urgent")
+
+    # Phase 5: Due dates & reminders
+    due_date: Optional[datetime] = Field(default=None, description="Task due date")
+    reminder_time: Optional[datetime] = Field(default=None, description="Reminder notification time")
+    reminder_sent: bool = Field(default=False, nullable=False, description="Whether reminder was sent")
+
+    # Phase 5: Recurring tasks
+    recurrence_type: Optional[str] = Field(default=None, description="Recurrence: daily, weekly, monthly, yearly")
+    recurrence_interval: Optional[int] = Field(default=None, description="Repeat every X days/weeks/months")
+    recurrence_end_date: Optional[datetime] = Field(default=None, description="Stop recurrence after this date")
+    parent_task_id: Optional[int] = Field(default=None, foreign_key="tasks.id", description="Original recurring task ID")
+
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
@@ -79,6 +99,64 @@ class Task(SQLModel, table=True):
                 "completed": False,
                 "created_at": "2025-12-14T10:30:00Z",
                 "updated_at": "2025-12-14T10:30:00Z"
+            }
+        }
+
+
+# ============================================================================
+# Tag Model (Phase 5)
+# ============================================================================
+
+class Tag(SQLModel, table=True):
+    """
+    Tags for organizing tasks (Phase 5 feature).
+
+    Constitution Compliance:
+    - Principle V: Database as Source of Truth
+    - Principle IV: Security First (user_id filtering)
+    """
+    __tablename__ = "tags"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: str = Field(index=True, nullable=False, description="User ID from Better Auth")
+    name: str = Field(max_length=50, nullable=False, description="Tag name")
+    color: Optional[str] = Field(default=None, max_length=7, description="Tag color (hex code)")
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "user_id": "auth0|507f1f77bcf86cd799439011",
+                "name": "work",
+                "color": "#FF5733",
+                "created_at": "2025-12-30T10:00:00Z"
+            }
+        }
+
+
+# ============================================================================
+# TaskTag Association (Phase 5)
+# ============================================================================
+
+class TaskTag(SQLModel, table=True):
+    """
+    Many-to-many relationship between tasks and tags (Phase 5 feature).
+    """
+    __tablename__ = "task_tags"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    task_id: int = Field(foreign_key="tasks.id", index=True, nullable=False)
+    tag_id: int = Field(foreign_key="tags.id", index=True, nullable=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "task_id": 123,
+                "tag_id": 5,
+                "created_at": "2025-12-30T10:00:00Z"
             }
         }
 
@@ -158,24 +236,47 @@ class Message(SQLModel, table=True):
 # ============================================================================
 
 class TaskCreate(SQLModel):
-    """Request model for creating a task"""
+    """Request model for creating a task (Phase 5 enhanced)"""
     title: str = Field(min_length=1, max_length=500)
     description: Optional[str] = Field(default=None, max_length=2000)
+    priority: Optional[str] = Field(default="medium", description="low, medium, high, urgent")
+    due_date: Optional[datetime] = Field(default=None, description="Task due date")
+    reminder_time: Optional[datetime] = Field(default=None, description="Reminder time")
+    recurrence_type: Optional[str] = Field(default=None, description="daily, weekly, monthly, yearly")
+    recurrence_interval: Optional[int] = Field(default=None, description="Repeat every X units")
+    recurrence_end_date: Optional[datetime] = Field(default=None, description="Stop recurrence after")
+    tags: Optional[List[str]] = Field(default=None, description="List of tag names")
 
 
 class TaskUpdate(SQLModel):
-    """Request model for updating a task"""
+    """Request model for updating a task (Phase 5 enhanced)"""
     title: Optional[str] = Field(default=None, max_length=500)
     description: Optional[str] = Field(default=None, max_length=2000)
+    priority: Optional[str] = Field(default=None, description="low, medium, high, urgent")
+    due_date: Optional[datetime] = Field(default=None, description="Task due date")
+    reminder_time: Optional[datetime] = Field(default=None, description="Reminder time")
+    recurrence_type: Optional[str] = Field(default=None, description="daily, weekly, monthly, yearly")
+    recurrence_interval: Optional[int] = Field(default=None, description="Repeat every X units")
+    recurrence_end_date: Optional[datetime] = Field(default=None, description="Stop recurrence after")
+    tags: Optional[List[str]] = Field(default=None, description="List of tag names")
 
 
 class TaskResponse(SQLModel):
-    """Response model for task operations"""
+    """Response model for task operations (Phase 5 enhanced)"""
     id: int
     user_id: str
     title: str
     description: Optional[str]
     completed: bool
+    priority: str
+    due_date: Optional[datetime]
+    reminder_time: Optional[datetime]
+    reminder_sent: bool
+    recurrence_type: Optional[str]
+    recurrence_interval: Optional[int]
+    recurrence_end_date: Optional[datetime]
+    parent_task_id: Optional[int]
+    tags: Optional[List[str]] = Field(default=None, description="List of tag names")
     created_at: datetime
     updated_at: datetime
 
@@ -194,6 +295,25 @@ class MessageResponse(SQLModel):
     user_id: str
     role: str
     content: str
+    created_at: datetime
+
+
+# ============================================================================
+# Tag Models (Phase 5)
+# ============================================================================
+
+class TagCreate(SQLModel):
+    """Request model for creating a tag"""
+    name: str = Field(min_length=1, max_length=50)
+    color: Optional[str] = Field(default=None, max_length=7, description="Hex color code")
+
+
+class TagResponse(SQLModel):
+    """Response model for tag operations"""
+    id: int
+    user_id: str
+    name: str
+    color: Optional[str]
     created_at: datetime
 
 
