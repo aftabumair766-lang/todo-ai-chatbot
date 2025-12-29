@@ -54,3 +54,7 @@ logs/
 htmlcov/
 .coverage
 coverage.xml
+
+# Kubernetes secrets (NEVER commit actual secrets)
+kubernetes/base/secrets-local.yaml
+**/secrets-local.yaml
