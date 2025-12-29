@@ -13,10 +13,10 @@ Constitution Compliance:
 
 import logging
 from datetime import datetime
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from backend.db.models import Task
+from sqlalchemy import select, or_, and_
+from backend.db.models import Task, Tag, TaskTag
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +30,16 @@ async def add_task(
     user_id: str,
     title: str,
     description: Optional[str] = None,
+    priority: Optional[str] = "medium",
+    due_date: Optional[datetime] = None,
+    reminder_time: Optional[datetime] = None,
+    recurrence_type: Optional[str] = None,
+    recurrence_interval: Optional[int] = None,
+    recurrence_end_date: Optional[datetime] = None,
+    tags: Optional[List[str]] = None,
 ) -> dict:
     """
-    Create a new task for the user.
+    Create a new task for the user (Phase 5 Enhanced).
 
     MCP Tool Signature:
         Name: add_task
@@ -40,31 +47,32 @@ async def add_task(
             - user_id (string, required): User identifier from JWT
             - title (string, required): Task title (max 500 chars)
             - description (string, optional): Task details (max 2000 chars)
+            - priority (string, optional): Priority level (low/medium/high/urgent)
+            - due_date (datetime, optional): Task due date
+            - reminder_time (datetime, optional): Reminder notification time
+            - recurrence_type (string, optional): daily/weekly/monthly/yearly
+            - recurrence_interval (int, optional): Repeat every X units
+            - recurrence_end_date (datetime, optional): Stop recurrence after date
+            - tags (list[string], optional): List of tag names
 
     Args:
         db: Async database session
         user_id: User ID from Better Auth JWT
         title: Task title
         description: Optional task description
+        priority: Task priority (Phase 5)
+        due_date: Task due date (Phase 5)
+        reminder_time: Reminder time (Phase 5)
+        recurrence_type: Recurrence pattern (Phase 5)
+        recurrence_interval: Recurrence interval (Phase 5)
+        recurrence_end_date: Recurrence end date (Phase 5)
+        tags: List of tag names (Phase 5)
 
     Returns:
-        dict: Task creation result
-        {
-            "success": true,
-            "task": {
-                "id": 123,
-                "user_id": "auth0|...",
-                "title": "Buy groceries",
-                "description": "Milk, eggs, bread",
-                "completed": false,
-                "created_at": "2025-12-14T10:30:00Z",
-                "updated_at": "2025-12-14T10:30:00Z"
-            },
-            "message": "Task created successfully"
-        }
+        dict: Task creation result with Phase 5 fields
 
     Raises:
-        ValueError: If title is empty or too long
+        ValueError: If validation fails
         Exception: Database errors
 
     Constitution Compliance:
@@ -81,13 +89,29 @@ async def add_task(
     if description and len(description) > 2000:
         raise ValueError("Task description cannot exceed 2000 characters")
 
+    # Validate priority
+    valid_priorities = ["low", "medium", "high", "urgent"]
+    if priority and priority not in valid_priorities:
+        raise ValueError(f"Priority must be one of: {', '.join(valid_priorities)}")
+
+    # Validate recurrence
+    valid_recurrence = ["daily", "weekly", "monthly", "yearly"]
+    if recurrence_type and recurrence_type not in valid_recurrence:
+        raise ValueError(f"Recurrence type must be one of: {', '.join(valid_recurrence)}")
+
     try:
-        # Create task object
+        # Create task object with Phase 5 fields
         task = Task(
             user_id=user_id,
             title=title.strip(),
             description=description.strip() if description else None,
             completed=False,
+            priority=priority or "medium",
+            due_date=due_date,
+            reminder_time=reminder_time,
+            recurrence_type=recurrence_type,
+            recurrence_interval=recurrence_interval,
+            recurrence_end_date=recurrence_end_date,
         )
 
         # Save to database
@@ -95,7 +119,32 @@ async def add_task(
         await db.commit()
         await db.refresh(task)
 
-        logger.info(f"Task created: id={task.id}, user_id={user_id}, title={title[:50]}")
+        # Handle tags if provided
+        task_tags = []
+        if tags:
+            for tag_name in tags:
+                # Find or create tag
+                tag_query = select(Tag).where(
+                    and_(Tag.user_id == user_id, Tag.name == tag_name.strip())
+                )
+                result = await db.execute(tag_query)
+                tag = result.scalar_one_or_none()
+
+                if not tag:
+                    # Create new tag
+                    tag = Tag(user_id=user_id, name=tag_name.strip())
+                    db.add(tag)
+                    await db.commit()
+                    await db.refresh(tag)
+
+                # Create task-tag association
+                task_tag = TaskTag(task_id=task.id, tag_id=tag.id)
+                db.add(task_tag)
+                task_tags.append(tag_name.strip())
+
+            await db.commit()
+
+        logger.info(f"Task created: id={task.id}, user_id={user_id}, title={title[:50]}, priority={priority}, tags={task_tags}")
 
         return {
             "success": True,
@@ -105,6 +154,13 @@ async def add_task(
                 "title": task.title,
                 "description": task.description,
                 "completed": task.completed,
+                "priority": task.priority,
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+                "reminder_time": task.reminder_time.isoformat() if task.reminder_time else None,
+                "recurrence_type": task.recurrence_type,
+                "recurrence_interval": task.recurrence_interval,
+                "recurrence_end_date": task.recurrence_end_date.isoformat() if task.recurrence_end_date else None,
+                "tags": task_tags if task_tags else [],
                 "created_at": task.created_at.isoformat(),
                 "updated_at": task.updated_at.isoformat(),
             },
