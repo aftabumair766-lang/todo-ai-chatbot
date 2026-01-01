@@ -46,16 +46,16 @@ podLabels:
 # -----------------------------------------------------------------------------
 # Pod Security Context
 # -----------------------------------------------------------------------------
-podSecurityContext:
-  fsGroup: 2000
+podSecurityContext: {}
+  # fsGroup: 2000  # Disabled - causes permission issues
 
 securityContext:
   capabilities:
     drop:
     - ALL
   readOnlyRootFilesystem: false
-  runAsNonRoot: true
-  runAsUser: 1000
+  runAsNonRoot: false
+  # runAsUser: 1000  # Disabled - need root for /root/.local/bin access
 
 # -----------------------------------------------------------------------------
 # Service Configuration
@@ -122,10 +122,10 @@ env:
 # -----------------------------------------------------------------------------
 # These should be created separately using kubectl or --set-file
 secrets:
-  # OPENAI_API_KEY: ""          # Set via kubectl or --set
-  # DATABASE_URL: ""            # Set via kubectl or --set
-  # BETTER_AUTH_SECRET: ""      # Set via kubectl or --set
-  # BETTER_AUTH_ISSUER: ""      # Set via kubectl or --set
+  OPENAI_API_KEY: ""          # Set via kubectl or --set
+  DATABASE_URL: ""            # Set via kubectl or --set
+  BETTER_AUTH_SECRET: ""      # Set via kubectl or --set
+  BETTER_AUTH_ISSUER: ""      # Set via kubectl or --set
 
 # -----------------------------------------------------------------------------
 # Node Selector, Tolerations, and Affinity

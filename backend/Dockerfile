@@ -61,7 +61,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
 # --host 0.0.0.0: Listen on all interfaces (required for containers)
 # --port 8000: Default port for backend
 # --workers 1: Single worker (can be scaled via Kubernetes replicas)
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use simple backend for Phase IV demo (no complex dependencies)
+CMD ["uvicorn", "main_simple:app", "--host", "0.0.0.0", "--port", "8000"]
+# For full backend: CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # =============================================================================
 # Image Build Instructions:

@@ -44,16 +44,16 @@ podLabels:
 # -----------------------------------------------------------------------------
 # Pod Security Context
 # -----------------------------------------------------------------------------
-podSecurityContext:
-  fsGroup: 2000
+podSecurityContext: {}
+  # fsGroup: 2000  # Disabled - causes permission issues
 
 securityContext:
   capabilities:
     drop:
     - ALL
   readOnlyRootFilesystem: false
-  runAsNonRoot: true
-  runAsUser: 101  # Nginx user
+  runAsNonRoot: false
+  # runAsUser: 101  # Disabled - nginx needs root for config access
 
 # -----------------------------------------------------------------------------
 # Service Configuration

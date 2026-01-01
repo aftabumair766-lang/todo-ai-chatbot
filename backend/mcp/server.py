@@ -18,6 +18,9 @@ from backend.mcp.tools import (
     complete_task,
     delete_task,
     update_task,
+    create_tag,
+    list_tags,
+    delete_tag,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,18 +42,21 @@ class MCPServer:
         """Initialize MCP server with tool registry."""
         self.tools: Dict[str, Callable] = {}
         self._register_tools()
-        logger.info("MCP Server initialized with 5 tools")
+        logger.info("MCP Server initialized with 8 tools (Phase 5 Enhanced)")
 
     def _register_tools(self) -> None:
         """
         Register all MCP tools with their schemas.
 
-        Tools Registered:
-        1. add_task - Create a new task
-        2. list_tasks - List tasks with filtering
+        Tools Registered (Phase 5 Enhanced):
+        1. add_task - Create a new task (with priority, due dates, tags, recurrence)
+        2. list_tasks - List tasks with filtering (priority, tags, search, sort)
         3. complete_task - Mark task as completed
         4. delete_task - Delete a task
-        5. update_task - Update task details
+        5. update_task - Update task details (all Phase 5 fields)
+        6. create_tag - Create a new tag
+        7. list_tags - List all user tags
+        8. delete_tag - Delete a tag
         """
         self.tools = {
             "add_task": add_task,
@@ -58,6 +64,9 @@ class MCPServer:
             "complete_task": complete_task,
             "delete_task": delete_task,
             "update_task": update_task,
+            "create_tag": create_tag,
+            "list_tags": list_tags,
+            "delete_tag": delete_tag,
         }
 
     def get_tool_schemas(self) -> list[dict]:
@@ -77,7 +86,7 @@ class MCPServer:
                 "type": "function",
                 "function": {
                     "name": "add_task",
-                    "description": "Create a new todo task for the user. Use this when the user wants to add, create, or make a new task.",
+                    "description": "Create a new todo task with Phase 5 features (priority, due dates, reminders, recurring tasks, tags). Use this when the user wants to add, create, or make a new task.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -93,6 +102,38 @@ class MCPServer:
                                 "type": "string",
                                 "description": "Optional task description or details (max 2000 characters)",
                             },
+                            "priority": {
+                                "type": "string",
+                                "enum": ["low", "medium", "high", "urgent"],
+                                "description": "Task priority level (default: medium)",
+                                "default": "medium",
+                            },
+                            "due_date": {
+                                "type": "string",
+                                "description": "Task due date in ISO format (e.g., 2025-12-31T23:59:59)",
+                            },
+                            "reminder_time": {
+                                "type": "string",
+                                "description": "Reminder notification time in ISO format",
+                            },
+                            "recurrence_type": {
+                                "type": "string",
+                                "enum": ["daily", "weekly", "monthly", "yearly"],
+                                "description": "Recurrence pattern for repeating tasks",
+                            },
+                            "recurrence_interval": {
+                                "type": "integer",
+                                "description": "Repeat every X days/weeks/months (requires recurrence_type)",
+                            },
+                            "recurrence_end_date": {
+                                "type": "string",
+                                "description": "Stop recurring after this date in ISO format",
+                            },
+                            "tags": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "List of tag names to organize the task (auto-creates tags if needed)",
+                            },
                         },
                         "required": ["user_id", "title"],
                     },
@@ -102,7 +143,7 @@ class MCPServer:
                 "type": "function",
                 "function": {
                     "name": "list_tasks",
-                    "description": "List all tasks for the user with optional status filtering. Use this when the user wants to see, view, or list their tasks.",
+                    "description": "List tasks with Phase 5 filtering (status, priority, tags, search) and sorting. Use this when the user wants to see, view, list, search, or filter their tasks.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -113,8 +154,34 @@ class MCPServer:
                             "status": {
                                 "type": "string",
                                 "enum": ["all", "pending", "completed"],
-                                "description": "Filter tasks by status: 'all' (default), 'pending' (incomplete), or 'completed'",
+                                "description": "Filter tasks by completion status (default: all)",
                                 "default": "all",
+                            },
+                            "priority": {
+                                "type": "string",
+                                "enum": ["low", "medium", "high", "urgent"],
+                                "description": "Filter tasks by priority level",
+                            },
+                            "tags": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Filter tasks by tag names (returns tasks with any of these tags)",
+                            },
+                            "search": {
+                                "type": "string",
+                                "description": "Search tasks by title or description (case-insensitive)",
+                            },
+                            "sort_by": {
+                                "type": "string",
+                                "enum": ["created_at", "updated_at", "due_date", "priority", "title"],
+                                "description": "Sort tasks by field (default: created_at)",
+                                "default": "created_at",
+                            },
+                            "sort_order": {
+                                "type": "string",
+                                "enum": ["asc", "desc"],
+                                "description": "Sort order: ascending or descending (default: desc)",
+                                "default": "desc",
                             },
                         },
                         "required": ["user_id"],
@@ -167,7 +234,7 @@ class MCPServer:
                 "type": "function",
                 "function": {
                     "name": "update_task",
-                    "description": "Update task title and/or description. Use this when the user wants to edit, modify, or update a task.",
+                    "description": "Update any task field including Phase 5 features (title, description, priority, due dates, tags, etc.). Use this when the user wants to edit, modify, or update a task.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -187,8 +254,102 @@ class MCPServer:
                                 "type": "string",
                                 "description": "New task description (optional, max 2000 characters)",
                             },
+                            "priority": {
+                                "type": "string",
+                                "enum": ["low", "medium", "high", "urgent"],
+                                "description": "New priority level",
+                            },
+                            "due_date": {
+                                "type": "string",
+                                "description": "New due date in ISO format",
+                            },
+                            "reminder_time": {
+                                "type": "string",
+                                "description": "New reminder time in ISO format",
+                            },
+                            "recurrence_type": {
+                                "type": "string",
+                                "enum": ["daily", "weekly", "monthly", "yearly"],
+                                "description": "New recurrence pattern",
+                            },
+                            "recurrence_interval": {
+                                "type": "integer",
+                                "description": "New recurrence interval",
+                            },
+                            "recurrence_end_date": {
+                                "type": "string",
+                                "description": "New recurrence end date in ISO format",
+                            },
+                            "tags": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "New list of tags (replaces all existing tags)",
+                            },
                         },
                         "required": ["user_id", "task_id"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_tag",
+                    "description": "Create a new tag for organizing tasks. Use this when the user wants to create or add a tag.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "user_id": {
+                                "type": "string",
+                                "description": "User identifier from JWT authentication",
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "Tag name (max 50 characters)",
+                            },
+                            "color": {
+                                "type": "string",
+                                "description": "Optional hex color code (e.g., #FF5733)",
+                            },
+                        },
+                        "required": ["user_id", "name"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "list_tags",
+                    "description": "List all tags for the user with usage counts. Use this when the user wants to see or list their tags.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "user_id": {
+                                "type": "string",
+                                "description": "User identifier from JWT authentication",
+                            },
+                        },
+                        "required": ["user_id"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "delete_tag",
+                    "description": "Delete a tag (removes it from all tasks). Use this when the user wants to delete or remove a tag.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "user_id": {
+                                "type": "string",
+                                "description": "User identifier from JWT authentication",
+                            },
+                            "tag_id": {
+                                "type": "integer",
+                                "description": "ID of the tag to delete",
+                            },
+                        },
+                        "required": ["user_id", "tag_id"],
                     },
                 },
             },

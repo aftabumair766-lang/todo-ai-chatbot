@@ -67,8 +67,8 @@ docker-compose.yml
 # Development files
 .eslintrc.json
 .prettierrc
-tsconfig.json
-tsconfig.node.json
+# tsconfig.json        # NEEDED for Docker build!
+# tsconfig.node.json   # NEEDED for Docker build!
 
 # Temporary files
 tmp/
