@@ -21,6 +21,10 @@ openai==1.12.0
 # Note: MCP SDK - using OpenAI function calling as MCP protocol
 # Tools are registered as OpenAI functions
 
+# Dapr SDK for Event-Driven Architecture (Phase V)
+dapr==1.12.0
+dapr-ext-grpc==1.12.0
+
 # Rate Limiting
 slowapi==0.1.9
 redis==5.0.1

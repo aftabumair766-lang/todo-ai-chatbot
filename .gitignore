@@ -58,3 +58,4 @@ coverage.xml
 # Kubernetes secrets (NEVER commit actual secrets)
 kubernetes/base/secrets-local.yaml
 **/secrets-local.yaml
+**/pubsub-kafka.yaml

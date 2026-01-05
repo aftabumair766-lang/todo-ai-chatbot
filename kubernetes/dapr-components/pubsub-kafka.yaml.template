@@ -1,0 +1,62 @@
+# =============================================================================
+# Dapr Kafka Pub/Sub Component for Phase V
+# =============================================================================
+# This component enables event-driven architecture using Redpanda Cloud
+#
+# Instructions:
+# 1. Copy this file: cp pubsub-kafka.yaml.template pubsub-kafka.yaml
+# 2. Replace placeholders with your Redpanda credentials
+# 3. Apply: kubectl apply -f pubsub-kafka.yaml -n todo-app
+# =============================================================================
+
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: todo-pubsub
+  namespace: todo-app
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  # Kafka Brokers (Replace with your Redpanda bootstrap server)
+  - name: brokers
+    value: "YOUR_BOOTSTRAP_SERVER"  # Example: abc123.redpanda.com:9092
+
+  # Consumer Group
+  - name: consumerGroup
+    value: "todo-chatbot-group"
+
+  # Client ID
+  - name: clientID
+    value: "todo-chatbot"
+
+  # Authentication
+  - name: authType
+    value: "password"
+
+  - name: saslUsername
+    value: "YOUR_SASL_USERNAME"  # From Redpanda console
+
+  - name: saslPassword
+    value: "YOUR_SASL_PASSWORD"  # From Redpanda console
+
+  - name: saslMechanism
+    value: "SCRAM-SHA-256"
+
+  # Security
+  - name: enableTLS
+    value: "true"
+
+  # Topics (auto-create if not exists)
+  - name: initialOffset
+    value: "newest"
+
+  - name: maxMessageBytes
+    value: "1048576"  # 1MB
+
+---
+# Topic configuration is handled by Redpanda
+# Create these topics in Redpanda console:
+# 1. task-events (for all task CRUD events)
+# 2. tag-events (for tag operations)
+# 3. reminder-events (for reminder notifications)

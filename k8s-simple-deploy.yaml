@@ -11,6 +11,18 @@ spec:
       app: todo-backend
   template:
     metadata:
+      annotations:
+        # Dapr sidecar injection for Phase V event-driven architecture
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "todo-backend"
+        dapr.io/app-port: "8000"
+        dapr.io/log-level: "info"
+        # Increase liveness probe delays for Kafka initialization
+        dapr.io/sidecar-liveness-probe-delay-seconds: "60"
+        dapr.io/sidecar-liveness-probe-timeout-seconds: "10"
+        dapr.io/sidecar-liveness-probe-period-seconds: "15"
+        dapr.io/sidecar-readiness-probe-delay-seconds: "10"
+        dapr.io/sidecar-readiness-probe-timeout-seconds: "5"
       labels:
         app: todo-backend
     spec:

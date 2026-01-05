@@ -17,8 +17,10 @@ from typing import Optional, Literal, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_, delete
 from backend.db.models import Task, Tag, TaskTag
+from backend.events import get_event_publisher
 
 logger = logging.getLogger(__name__)
+event_publisher = get_event_publisher()
 
 
 # ============================================================================
@@ -145,6 +147,16 @@ async def add_task(
             await db.commit()
 
         logger.info(f"Task created: id={task.id}, user_id={user_id}, title={title[:50]}, priority={priority}, tags={task_tags}")
+
+        # Phase V: Publish task.created event to Kafka
+        event_publisher.publish_task_created(
+            task_id=str(task.id),
+            user_id=user_id,
+            title=task.title,
+            priority=task.priority,
+            tags=task_tags,
+            due_date=task.due_date.isoformat() if task.due_date else None
+        )
 
         return {
             "success": True,
@@ -383,6 +395,13 @@ async def complete_task(
 
         logger.info(f"Task completed: id={task_id}, user_id={user_id}")
 
+        # Phase V: Publish task.completed event to Kafka
+        event_publisher.publish_task_completed(
+            task_id=str(task.id),
+            user_id=user_id,
+            title=task.title
+        )
+
         return {
             "success": True,
             "task": {
@@ -496,6 +515,12 @@ async def delete_task(
         await db.commit()
 
         logger.info(f"Task deleted: id={task_id}, user_id={user_id}")
+
+        # Phase V: Publish task.deleted event to Kafka
+        event_publisher.publish_task_deleted(
+            task_id=str(task_id),
+            user_id=user_id
+        )
 
         return {
             "success": True,
@@ -668,6 +693,25 @@ async def update_task(
         task_tags = [row[0] for row in tags_result.all()]
 
         logger.info(f"Task updated: id={task_id}, user_id={user_id}")
+
+        # Phase V: Publish task.updated event to Kafka
+        changes = {}
+        if title is not None:
+            changes["title"] = task.title
+        if description is not None:
+            changes["description"] = task.description
+        if priority is not None:
+            changes["priority"] = task.priority
+        if due_date is not None:
+            changes["due_date"] = task.due_date.isoformat() if task.due_date else None
+        if tags is not None:
+            changes["tags"] = task_tags
+
+        event_publisher.publish_task_updated(
+            task_id=str(task.id),
+            user_id=user_id,
+            changes=changes
+        )
 
         return {
             "success": True,
